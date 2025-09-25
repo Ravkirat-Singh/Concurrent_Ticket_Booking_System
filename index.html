@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ticket Booking System</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f6faff;
+      margin: 0;
+      min-height: 100vh;
+    }
+    h1 {
+      color: #1a237e;
+      text-align: center;
+      margin-top: 30px;
+      letter-spacing: 1.2px;
+      font-weight: 600;
+      font-size: 2rem;
+      margin-bottom: 18px;
+    }
+    #seats { 
+      max-width: 640px; 
+      margin: 24px auto; 
+    }
+    .seat-card { 
+      background: #fff;
+      border: 1.3px solid #90a4ae;
+      border-radius: 7px;
+      box-shadow: 0 1px 3px #e3e7ee;
+      color: #222;
+      margin: 13px 0; 
+      padding: 18px; 
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .seat-id {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #1565c0;
+    }
+    .seat-status {
+      padding: 4px 14px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 1rem;
+      border: 1px solid #b0bec5;
+      background: #e9ecef;
+      color: #37474f;
+    }
+    .available { color: #006400; border-color: #aed581; background: #e8f5e9;}
+    .locked { color: #946200; border-color: #ffe082; background: #fff8e1;}
+    .booked { color: #b71c1c; border-color: #ef9a9a; background: #fff3f3;}
+    button {
+      font-size: 1rem;
+      padding: 7px 15px;
+      border-radius: 5px;
+      border: 1px solid #1565c0;
+      background: #1565c0;
+      color: #fff;
+      font-weight: bold;
+      margin: 0 5px;
+      cursor: pointer;
+      transition: 0.18s;
+    }
+    button:active, button:hover {
+      background: #0d47a1;
+    }
+    #actions { text-align: center; margin-bottom: 12px; }
+    #user {
+      padding: 7px;
+      border-radius: 5px;
+      border: 1px solid #90a4ae;
+      font-size: 1rem;
+    }
+    #infoBox {
+      max-width: 640px;
+      margin: 16px auto;
+      background: #fffde7;
+      color: #5d4037;
+      border: 1.3px solid #ffe082;
+      border-radius: 5px;
+      padding: 11px;
+      font-weight: bold;
+      text-align: center;
+      font-size: 1rem;
+      letter-spacing: 0.2px;
+      min-height: 18px;
+    }
+    @media (max-width: 700px) {
+      #seats, #infoBox { max-width: 99vw; margin: 8px;}
+    }
+  </style>
+</head>
+<body>
+  <h1>Ticket Booking System</h1>
+  <div id="actions">
+    <input type="text" id="user" placeholder="Enter your username">
+    <button onclick="loadSeats()">Refresh Seats</button>
+  </div>
+  <div id="seats"></div>
+  <div id="infoBox"></div>
+<script>
+function showInfo(msg, color="#5d4037") {
+  const infoBox = document.getElementById('infoBox');
+  infoBox.innerHTML = msg;
+  infoBox.style.color = color;
+  setTimeout(()=>{infoBox.innerHTML="";},2250);
+}
+function loadSeats() {
+  fetch('/api/seats').then(res=>res.json()).then(seats=>{
+    const user = document.getElementById('user').value;
+    document.getElementById('seats').innerHTML = seats.map(seat => 
+      `<div class="seat-card">
+          <span class="seat-id">Seat ${seat.id}</span>
+          <span class="seat-status ${seat.status}">
+            ${seat.status.charAt(0).toUpperCase()+seat.status.slice(1)}
+            ${seat.lockedBy ? (" ("+seat.lockedBy+")") : ""}
+          </span>
+          <span>
+            ${seat.status=="available"?
+              `<button onclick="lockSeat(${seat.id})">Lock</button>`:""}
+            ${seat.status=="locked" && seat.lockedBy==user?
+              `<button onclick="confirmSeat(${seat.id})">Confirm</button>`:""}
+          </span>
+      </div>`
+    ).join('');
+  });
+}
+function lockSeat(id) {
+  const user = document.getElementById('user').value;
+  if (!user) { showInfo("Enter username!", "#b71c1c"); return; }
+  fetch(`/api/seats/${id}/lock`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({user})
+  }).then(res=>res.json()).then(res=>{
+    if(res.error) showInfo(res.error,"#b71c1c");
+    else showInfo(res.message,"#006400");
+    loadSeats();
+  });
+}
+function confirmSeat(id) {
+  const user = document.getElementById('user').value;
+  if (!user) { showInfo("Enter username!", "#b71c1c"); return; }
+  fetch(`/api/seats/${id}/confirm`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({user})
+  }).then(res=>res.json()).then(res=>{
+    if(res.error) showInfo(res.error,"#b71c1c");
+    else showInfo(res.message,"#006400");
+    loadSeats();
+  });
+}
+window.onload = loadSeats;
+</script>
+</body>
+</html>
